@@ -136,6 +136,8 @@ void ObjLoader::readMTL() {
 			qint32 B = 0x0000ff00;
 			qint32 A = 255;
 
+			QString txtfname_normalmap;
+
 			do {
 				s = f.readLine(buffer, 1024);
 				if (s == -1) break;
@@ -185,6 +187,13 @@ void ObjLoader::readMTL() {
 					}
 					continue;
 				}
+				// add test map_narmal
+				if(str.startsWith("Norm",Qt::CaseInsensitive)){
+					txtfname_normalmap = str.mid(5).trimmed();
+					txtfname_normalmap = txtfname_normalmap.remove(QRegExp("^()\""));
+					txtfname_normalmap = txtfname_normalmap.remove(QRegExp("(\")$"));
+					continue;
+				}
 
 			} while (true);
 
@@ -204,6 +213,22 @@ void ObjLoader::readMTL() {
 					}
 				if (!exists) {
 					texture_filenames.push_back(LoadTexture(txtfname));
+				}
+			}
+			
+			if (txtfname_normalmap.length() > 0){
+				sanitizeTextureFilepath(txtfname_normalmap);
+				resolveTextureFilepath(file.fileName(), txtfname_normalmap);
+
+				textures_map.insert(mtltag, txtfname_normalmap);
+				bool exists = false;
+				for (auto fn : texture_filenames)
+					if (fn.filename == txtfname_normalmap){
+						exists = true;
+						break;
+					}
+				if (!exists){
+					texture_filenames.push_back(LoadTexture(txtfname_normalmap));
 				}
 			}
 			//std::cout << buffer;// << endl;
