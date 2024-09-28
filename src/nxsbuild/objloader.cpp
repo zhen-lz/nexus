@@ -131,12 +131,11 @@ void ObjLoader::readMTL() {
 		if (str.startsWith("newmtl", Qt::CaseInsensitive)){
 			QString mtltag = str.section(" ", 1);
 			QString txtfname;
+			QString txtfname_normal;
 			qint32 R = 0xff000000;
 			qint32 G = 0x00ff0000;
 			qint32 B = 0x0000ff00;
 			qint32 A = 255;
-
-			QString txtfname_normalmap;
 
 			do {
 				s = f.readLine(buffer, 1024);
@@ -187,11 +186,10 @@ void ObjLoader::readMTL() {
 					}
 					continue;
 				}
-				// add test map_narmal
 				if(str.startsWith("Norm",Qt::CaseInsensitive)){
-					txtfname_normalmap = str.mid(5).trimmed();
-					txtfname_normalmap = txtfname_normalmap.remove(QRegExp("^()\""));
-					txtfname_normalmap = txtfname_normalmap.remove(QRegExp("(\")$"));
+					txtfname_normal = str.mid(5).trimmed();
+					txtfname_normal = txtfname_normal.remove(QRegExp("^()\""));
+					txtfname_normal = txtfname_normal.remove(QRegExp("(\")$"));
 					continue;
 				}
 
@@ -215,22 +213,22 @@ void ObjLoader::readMTL() {
 					texture_filenames.push_back(LoadTexture(txtfname));
 				}
 			}
-			
-			if (txtfname_normalmap.length() > 0){
-				sanitizeTextureFilepath(txtfname_normalmap);
-				resolveTextureFilepath(file.fileName(), txtfname_normalmap);
+			if (txtfname_normal.length() > 0){
+				sanitizeTextureFilepath(txtfname_normal);
+				resolveTextureFilepath(file.fileName(), txtfname_normal);
 
-				textures_map.insert(mtltag, txtfname_normalmap);
+				// textures_map.insert(mtltag, txtfname_normal);
 				bool exists = false;
 				for (auto fn : texture_filenames)
-					if (fn.filename == txtfname_normalmap){
+					if (fn.filename == txtfname_normal){
 						exists = true;
 						break;
 					}
 				if (!exists){
-					texture_filenames.push_back(LoadTexture(txtfname_normalmap));
+					texture_filenames.push_back(LoadTexture(txtfname_normal));
 				}
 			}
+			
 			//std::cout << buffer;// << endl;
 			cnt++;
 		}
@@ -240,6 +238,9 @@ void ObjLoader::readMTL() {
 		std::cout << qPrintable("Texture: " + tex.filename) << std::endl;
 	if (texture_filenames.size() > 0)
 		has_textures = true;
+	if (texture_normal_filenames.size() > 0){
+		has_textures_normal = true;
+	}
 	if (cnt)
 		has_colors = true;
 }

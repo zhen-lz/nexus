@@ -49,13 +49,19 @@ public:
 	vcg::Box3d box;
 	
 	std::vector<LoadTexture> texture_filenames;
+	std::vector<LoadTexture> texture_normal_filenames;
 	int texOffset; //when returning triangles add texOffset to refer to the correct texture in stream.
+
+	virtual bool hasTexturesNormal() { return has_textures_normal;}
+
+
 
 	
 protected:
 	bool has_colors;
 	bool has_normals;
 	bool has_textures;
+	bool has_textures_normal;
 	float quantization;
 
 	void quantize(float &value);
