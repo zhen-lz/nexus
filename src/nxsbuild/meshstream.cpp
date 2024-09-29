@@ -99,10 +99,16 @@ void Stream::load(MeshLoader *loader) {
 	has_colors &= loader->hasColors();
 	has_normals &= loader->hasNormals();
 	has_textures &= loader->hasTextures();
+	has_textures_normal &= loader->hasTexturesNormal();
 
 	if(has_textures) {
 		for(auto tex: loader->texture_filenames) {
 			textures.push_back(tex);
+		}
+	}
+	if(has_textures_normal) {
+		for(auto tex_nor: loader->texture_normal_filenames) {
+			textures_normal.push_back(tex_nor);
 		}
 	}
 }
@@ -112,6 +118,7 @@ void Stream::load(QStringList paths, QString material) {
 	has_colors = true;
 	has_normals = true;
 	has_textures = true;
+	has_textures_normal = true;
 	foreach(QString file, paths) {
 		qDebug() << "Reading" << qPrintable(file);
 		MeshLoader *loader = getLoader(file, material);

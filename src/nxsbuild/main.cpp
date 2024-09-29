@@ -232,11 +232,13 @@ int main(int argc, char *argv[]) {
 		bool has_colors = stream->hasColors();
 		bool has_normals = stream->hasNormals();
 		bool has_textures = stream->hasTextures();
+		bool has_textures_normal = stream->hasTexturesNormal();
 
 		cout << "Components: " << input;
 		if(has_normals) cout << " normals";
 		if(has_colors) cout << " colors";
 		if(has_textures) cout << " textures";
+		if(has_textures_normal) cout << " normal_textures";
 		cout << "\n";
 
 		quint32 components = 0;
@@ -272,6 +274,11 @@ int main(int argc, char *argv[]) {
 			builder.header.signature.flags |= nx::Signature::Flags::DEEPZOOM;
 		builder.tex_quality = tex_quality;
 		bool success = builder.initAtlas(stream->textures);
+		if(!success) {
+			cerr << "Exiting" << endl;
+			return 1;
+		}
+		success = builder.initAtlasNor(stream->textures_normal);
 		if(!success) {
 			cerr << "Exiting" << endl;
 			return 1;

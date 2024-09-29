@@ -135,6 +135,15 @@ bool NexusBuilder::initAtlas(std::vector<LoadTexture> &textures) {
 	return true;
 }
 
+bool NexusBuilder::initAtlasNor(std::vector<LoadTexture> &textures) {
+	if(textures.size()) {
+		bool success = atlas_nor.addTextures(textures);
+		if(!success)
+			return false;
+	}
+	return true;
+}
+
 void NexusBuilder::create(KDTree *tree, Stream *stream, uint top_node_size) {
 	Node sink;
 	sink.first_patch = 0;
@@ -200,7 +209,7 @@ public:
 
 };
 
-QImage NexusBuilder::extractNodeTex(TMesh &mesh, int level, float &error, float &pixelXedge) {
+std::vector<QImage>  NexusBuilder::extractNodeTex(TMesh &mesh, int level, float &error, float &pixelXedge) {
 	std::vector<vcg::Box2f> boxes;
 	std::vector<int> box_texture; //which texture each box belongs;
 	std::vector<int> vertex_to_tex(mesh.vert.size(), -1);
@@ -343,6 +352,9 @@ QImage NexusBuilder::extractNodeTex(TMesh &mesh, int level, float &error, float 
 	//	std::cout << "Boxes: " << boxes.size() << " Final size: " << finalSize[0] << " " << finalSize[1] << std::endl;
 	QImage image(finalSize[0], finalSize[1], QImage::Format_RGB32);
 	image.fill(QColor(127, 127, 127));
+
+	QImage image_normal(finalSize[0], finalSize[1], QImage::Format_RGB32);
+	image_normal.fill(QColor(127,127,127));
 	//copy boxes using mapping
 
 	float pdx = 1/(float)image.width();
@@ -421,6 +433,7 @@ QImage NexusBuilder::extractNodeTex(TMesh &mesh, int level, float &error, float 
 		QMutexLocker locker(&m_atlas);
 		//	static int boxid = 0;
 		QPainter painter(&image);
+		QPainter painter_normal(&image_normal);
 		//convert tex coordinates using mapping
 		for(int i = 0; i < boxes.size(); i++) {
 
@@ -436,6 +449,9 @@ QImage NexusBuilder::extractNodeTex(TMesh &mesh, int level, float &error, float 
 
 			QImage rect = atlas.read(source, level, QRect(o[0], o[1], s[0], s[1]));
 			painter.drawImage(mapping[i][0], mapping[i][1], rect);
+
+			QImage rect_normal = atlas_nor.read(source, level, QRect(o[0], o[1], s[0], s[1]));
+			painter_normal.drawImage(mapping[i][0], mapping[i][1], rect);
 
 			//		painter.fillRect(mapping[i][0], mapping[i][1], s[0], s[1], QColor(color[0], color[1], color[2]));
 			//		boxid++;
@@ -478,9 +494,12 @@ QImage NexusBuilder::extractNodeTex(TMesh &mesh, int level, float &error, float 
 	}
 
 	image = image.mirrored();
+	image_normal = image_normal.mirrored();
 	//static int imgcount = 0;
 	//image.save(QString("OUT_test_%1.jpg").arg(imgcount++));
-	return image;
+
+	std::vector<QImage> vq ={image,image_normal};
+	return vq;
 }
 
 void NexusBuilder::createCloudLevel(KDTreeCloud *input, StreamCloud *output, int level) {
@@ -624,7 +643,9 @@ void NexusBuilder::processBlock(KDTreeSoup *input, StreamSoup *output, uint bloc
 	} else {
 
 		if(useNodeTex) {
-			QImage nodetex = extractNodeTex(tmp, level, error, pixelXedge);
+			std::vector<QImage> vq = extractNodeTex(tmp, level, error, pixelXedge);
+			QImage nodetex = vq[0];
+			QImage nodetex_nor = vq[1];
 			tmp.serialize(buffer, header.signature, node_patches);
 
 			Texture t;
@@ -653,6 +674,35 @@ void NexusBuilder::processBlock(KDTreeSoup *input, StreamSoup *output, uint bloc
 				for(Patch &patch: node_patches)
 					patch.texture = textures.size()-1; //last texture inserted
 			}
+
+			Texture t_n;
+
+			{
+				QMutexLocker locker(&m_textures);
+				t_n.offset = nodeTex.size()/NEXUS_PADDING;
+
+				output_pixels += nodetex_nor.width()*nodetex_nor.height();
+
+				QImageWriter writer(&nodeTex, "jpg");
+				writer.setQuality(tex_quality);
+#if QT_VERSION >= QT_VERSION_CHECK(5, 5, 0)
+				writer.setOptimizedWrite(true);
+				writer.setProgressiveScanWrite(true);
+#endif
+				writer.write(nodetex_nor);
+
+				quint64 size = pad(nodeTex.size());
+				nodeTex.resize(size);
+				nodeTex.seek(size);
+			}
+			{
+				QMutexLocker locker(&m_builder);
+				textures.push_back(t);
+				for(Patch &patch: node_patches)
+					patch.texture = textures.size()-1; //last texture inserted
+			}
+
+			// TODO:here we didn't seperate the tex and tex_nor, but put them into textures, if we need sep, plea do.
 
 			//#define DEBUG_TEXTURES
 #ifdef DEBUG_TEXTURES
@@ -772,6 +822,7 @@ void NexusBuilder::processBlock(KDTreeSoup *input, StreamSoup *output, uint bloc
 
 void NexusBuilder::createMeshLevel(KDTreeSoup *input, StreamSoup *output, int level) {
 	atlas.buildLevel(level);
+	atlas_nor.buildLevel(level);
 	if(level > 0)
 		atlas.flush(level-1);
 
@@ -937,12 +988,19 @@ void NexusBuilder::save(QString filename) {
 	}
 
 	qint64 r = file.write((char*)&header, sizeof(Header));
+	cout << "header:";
+	cout << "nvert:" + header.nvert << ";" << "nface:" + header.nface << ";" <<
+		"nnode:" + header.n_nodes <<";"<< "npatch" + header.n_patches<<";"<< "ntex" + header.n_textures << endl;
 	if(r == -1)
 		throw(file.errorString());
 	assert(nodes.size());
 	file.write((char*)&(nodes[0]), sizeof(Node)*nodes.size());
 	if(patches.size())
 		file.write((char*)&(patches[0]), sizeof(Patch)*patches.size());
+	cout << "patch";
+	for(int i=0;i<patches.size();i++){
+		cout << patches[i].node << ";" << patches[i].triangle_offset << ";" <<patches[i].texture << endl;
+	}
 	if(textures.size())
 		file.write((char*)&(textures[0]), sizeof(Texture)*textures.size());
 	file.seek(index_size);

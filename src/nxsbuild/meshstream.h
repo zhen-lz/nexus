@@ -37,7 +37,9 @@ public:
 	bool has_colors;
 	bool has_normals;
 	bool has_textures;
+	bool has_textures_normal;
 	std::vector<LoadTexture> textures;
+	std::vector<LoadTexture> textures_normal;
 	vcg::Point3d origin = vcg::Point3d(0, 0, 0);
 
 	Stream();
@@ -55,6 +57,7 @@ public:
 	virtual bool hasColors() { return has_colors; }
 	virtual bool hasNormals() { return has_normals; }
 	virtual bool hasTextures() { return has_textures; }
+	virtual bool hasTexturesNormal() { return has_textures_normal; }
 
 protected:
 	std::vector<std::vector<quint64> > levels; //for each level the list of blocks
