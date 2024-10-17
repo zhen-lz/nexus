@@ -277,11 +277,17 @@ int main(int argc, char *argv[]) {
 		if(!success) {
 			cerr << "Exiting" << endl;
 			return 1;
+		}else{
+			cout << "Texture size: " << stream->textures.size() << endl;
+			cout << "Texture pyramids size: " << builder.atlas.pyramids.size() << endl;
 		}
 		success = builder.initAtlasNor(stream->textures_normal);
 		if(!success) {
 			cerr << "Exiting" << endl;
 			return 1;
+		}else{
+			cout << "Normal Texture size: " << stream->textures_normal.size() << endl;
+			cout << "Normal Texture pyramids size: " << builder.atlas_nor.pyramids.size() << endl;
 		}
 
 

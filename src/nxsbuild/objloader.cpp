@@ -219,13 +219,13 @@ void ObjLoader::readMTL() {
 
 				// textures_map.insert(mtltag, txtfname_normal);
 				bool exists = false;
-				for (auto fn : texture_filenames)
+				for (auto fn : texture_normal_filenames)
 					if (fn.filename == txtfname_normal){
 						exists = true;
 						break;
 					}
 				if (!exists){
-					texture_filenames.push_back(LoadTexture(txtfname_normal));
+					texture_normal_filenames.push_back(LoadTexture(txtfname_normal));
 				}
 			}
 			
@@ -236,6 +236,9 @@ void ObjLoader::readMTL() {
 	std::cout << "Colors read: " << cnt << std::endl;
 	for (auto tex : texture_filenames)
 		std::cout << qPrintable("Texture: " + tex.filename) << std::endl;
+	for(auto tex : texture_normal_filenames){
+		std::cout << qPrintable("Texture: " + tex.filename) << std::endl;
+	}
 	if (texture_filenames.size() > 0)
 		has_textures = true;
 	if (texture_normal_filenames.size() > 0){

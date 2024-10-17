@@ -308,6 +308,7 @@ Mesh = function() {
 	t.reqAttempt = 0;
 	t.georeq = {}
 	t.texreq = {}
+	t.texreq2 = {}
 }
 
 Mesh.prototype = {
@@ -342,6 +343,7 @@ Mesh.prototype = {
 					if(mesh.reqAttempt < maxReqAttempt) mesh.open(mesh.url + '?' + Math.random()); // BLINK ENGINE CACHE BUG PATCH
 					return;
 				}
+				console.log(header);
 				mesh.reqAttempt = 0;
 				for(i in header)
 					mesh[i] = header[i];
@@ -418,7 +420,8 @@ Mesh.prototype = {
 		t.nspheres  = new Float32Array(n*5);
 		t.nsize     = new Float32Array(n);
 		t.nfirstpatch = new Uint32Array(n);
-
+		console.log(buffer);
+		
 		for(i = 0; i < n; i++) {
 			t.noffsets[i] = padding*getUint32(view); //offset
 			t.nvertices[i] = getUint16(view);        //verticesCount
@@ -472,7 +475,7 @@ Mesh.prototype = {
 		t.errors = new Float32Array(n); //biggest error of instances
 		t.ibo    = new Array(n);
 		t.vbo    = new Array(n);
-		t.texids = new Array(n);
+		t.texids = new Array(t.texturesCount);
 
 		t.isReady = true;
 		if(t.onLoad) t.onLoad();
@@ -549,7 +552,7 @@ Instance = function(gl) {
 	this.onLoad = function() {};
 	this.onUpdate = null;
 	this.drawBudget = drawBudget;
-	this.attributes = { 'position':0, 'normal':1, 'color':2, 'uv':3, 'size':4, 'map':0 };
+	this.attributes = { 'position':0, 'normal':1, 'color':2, 'uv':3, 'size':4, 'map':0 ,'normalMap':1};
 }
 
 Instance.prototype = {
@@ -944,9 +947,15 @@ Instance.prototype = {
 					if(m.vertex.texCoord) {
 						var texid = m.patches[p*3+2];
 						if(texid != -1 && texid != last_texture) { //bind texture
-							var tex = m.texids[texid];
-							gl.activeTexture(gl.TEXTURE0 + attr.map);
+							
+							var tex = m.texids[texid-1];
+							gl.activeTexture(gl.TEXTURE0 + 0);
 							gl.bindTexture(gl.TEXTURE_2D, tex);
+							
+							var tex_nor = m.texids[texid];
+							gl.activeTexture(gl.TEXTURE0 + 1);
+							gl.bindTexture(gl.TEXTURE_2D, tex_nor);
+
 							last_texture = texid;
 						}
 					}
@@ -1037,7 +1046,7 @@ function removeNode(context, node) {
 	m.vbo[n] = m.ibo[n] = null;
 
 	if(!m.vertex.texCoord) return;
-	if (n in m.texreq && m.texreq[n].readyState != 4) m.texreq.abort();
+	if (n in m.texreq && m.texreq[n].readyState != 4) {m.texreq.abort();m.texreq2.abort();};
 	var tex = m.patches[m.nfirstpatch[n]*3+2]; //TODO assuming one texture per node
 	m.texref[tex]--;
 
@@ -1071,7 +1080,7 @@ function requestNodeGeometry(context, node) {
 
 	m.status[n]++; //pending
 
-	if(m.db) {
+	if(!m.db) {
 		let transaction = node.mesh.db.transaction('mesh', "readwrite");
 		let request = transaction.objectStore('mesh').get(node.id);
 		request.onsuccess = (e) => { 
@@ -1137,7 +1146,7 @@ function requestNodeTexture(context, node) {
 		let request = transaction.objectStore('tex').get(node.id);
 		request.onsuccess = (e) => { 
 			if(request.result) {
-				loadNodeTecture({ response: request.result}, context, node);
+				loadNodeTexture({ response: request.result}, context, node);
 			} else {
 				httpRequestNodeTexture(context, node, tex);
 			}
@@ -1149,13 +1158,13 @@ function requestNodeTexture(context, node) {
 	}
 }
 
-function httpRequestNodeTexture(context, node, tex) {
+function httpRequestNodeTexture(context, node, tex , i) {
 	var n = node.id;
 	var m = node.mesh;
 	let request = {
 		load:function() { 
 			delete m.texreq[n];
-			loadNodeTexture(this, context, node, tex);  },
+			loadNodeTexture(this, context, node, tex-1, 0);  },
 		error:function() {
 			if(Debug.verbose) console.log("Texture request error!");
 			delete m.texreq[n];
@@ -1172,13 +1181,43 @@ function httpRequestNodeTexture(context, node, tex) {
 	if(m.deepzoom) {
 		request.url = m.baseurl + tex + '.jpg';
 	} else {
+		console.log("request node tex_id " + tex-1);
 		Object.assign(request, {
+			url:m.url,
+			start:m.textures[tex-1],
+			end:m.textures[tex],
+		});
+	}
+	m.texreq[n] = m.httpRequest(request);
+
+	let request_2 = {
+		load:function() { 
+			delete m.texreq2[n];
+			loadNodeTexture(this, context, node, tex, 1);  },
+		error:function() {
+			if(Debug.verbose) console.log("Texture request error!");
+			delete m.texreq2[n];
+			recoverNode(context, node, 1);
+		},
+		abort:function() {
+			if(Debug.verbose) console.log("Texture request abort!");
+			delete m.texreq2[n];
+			removeNode(context, node);
+		},
+		type:'blob'
+	};
+
+	if(m.deepzoom) {
+		request.url = m.baseurl + tex + '.jpg';
+	} else {
+		console.log("request node tex_id " + tex);
+		Object.assign(request_2, {
 			url:m.url,
 			start:m.textures[tex],
 			end:m.textures[tex+1],
 		});
 	}
-	m.texreq[n] = m.httpRequest(request);
+	m.texreq2[n] = m.httpRequest(request_2);
 }
 
 function recoverNode(context, node, id) {
@@ -1240,7 +1279,7 @@ function powerOf2(n) {
 	return n && (n & (n - 1)) === 0;
 }
 
-function loadNodeTexture(request, context, node, texid) {
+function loadNodeTexture(request, context, node, texid ,i) {
 	var n = node.id;
 	var m = node.mesh;
 	if(m.status[n] == 0) return;
@@ -1259,6 +1298,7 @@ function loadNodeTexture(request, context, node, texid) {
 		var flip = gl.getParameter(gl.UNPACK_FLIP_Y_WEBGL);
 		gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
 		var tex = m.texids[texid] = gl.createTexture();
+		gl.activeTexture(gl.TEXTURE0 + i);
 		gl.bindTexture(gl.TEXTURE_2D, tex);
 
 //TODO some textures might be alpha only! save space

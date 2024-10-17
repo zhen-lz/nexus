@@ -451,7 +451,7 @@ std::vector<QImage>  NexusBuilder::extractNodeTex(TMesh &mesh, int level, float 
 			painter.drawImage(mapping[i][0], mapping[i][1], rect);
 
 			QImage rect_normal = atlas_nor.read(source, level, QRect(o[0], o[1], s[0], s[1]));
-			painter_normal.drawImage(mapping[i][0], mapping[i][1], rect);
+			painter_normal.drawImage(mapping[i][0], mapping[i][1], rect_normal);
 
 			//		painter.fillRect(mapping[i][0], mapping[i][1], s[0], s[1], QColor(color[0], color[1], color[2]));
 			//		boxid++;
@@ -649,6 +649,7 @@ void NexusBuilder::processBlock(KDTreeSoup *input, StreamSoup *output, uint bloc
 			tmp.serialize(buffer, header.signature, node_patches);
 
 			Texture t;
+			Texture t_n;
 
 			{
 				QMutexLocker locker(&m_textures);
@@ -667,37 +668,29 @@ void NexusBuilder::processBlock(KDTreeSoup *input, StreamSoup *output, uint bloc
 				quint64 size = pad(nodeTex.size());
 				nodeTex.resize(size);
 				nodeTex.seek(size);
-			}
-			{
-				QMutexLocker locker(&m_builder);
-				textures.push_back(t);
-				for(Patch &patch: node_patches)
-					patch.texture = textures.size()-1; //last texture inserted
-			}
 
-			Texture t_n;
-
-			{
-				QMutexLocker locker(&m_textures);
+				// --- normal texture
 				t_n.offset = nodeTex.size()/NEXUS_PADDING;
 
 				output_pixels += nodetex_nor.width()*nodetex_nor.height();
 
-				QImageWriter writer(&nodeTex, "jpg");
-				writer.setQuality(tex_quality);
+				QImageWriter writer_n(&nodeTex, "jpg");
+				writer_n.setQuality(tex_quality);
 #if QT_VERSION >= QT_VERSION_CHECK(5, 5, 0)
-				writer.setOptimizedWrite(true);
-				writer.setProgressiveScanWrite(true);
+				writer_n.setOptimizedWrite(true);
+				writer_n.setProgressiveScanWrite(true);
 #endif
-				writer.write(nodetex_nor);
+				writer_n.write(nodetex_nor);
 
-				quint64 size = pad(nodeTex.size());
-				nodeTex.resize(size);
-				nodeTex.seek(size);
+				quint64 size_n = pad(nodeTex.size());
+				nodeTex.resize(size_n);
+				nodeTex.seek(size_n);
 			}
 			{
 				QMutexLocker locker(&m_builder);
 				textures.push_back(t);
+				textures.push_back(t_n);
+				cout << "Node_texture t+t_n size: " << textures.size() << endl;
 				for(Patch &patch: node_patches)
 					patch.texture = textures.size()-1; //last texture inserted
 			}
@@ -944,6 +937,8 @@ void NexusBuilder::save(QString filename) {
 		header.nvert += node.nvert;
 	}
 
+	cout << "Nodes: " << nodes.size() << " Patches: " << patches.size() << " Textures: " << textures.size() << endl;
+
 	quint64 size = sizeof(Header)  +
 			nodes.size()*sizeof(Node) +
 			patches.size()*sizeof(Patch) +
@@ -988,19 +983,16 @@ void NexusBuilder::save(QString filename) {
 	}
 
 	qint64 r = file.write((char*)&header, sizeof(Header));
-	cout << "header:";
-	cout << "nvert:" + header.nvert << ";" << "nface:" + header.nface << ";" <<
-		"nnode:" + header.n_nodes <<";"<< "npatch" + header.n_patches<<";"<< "ntex" + header.n_textures << endl;
 	if(r == -1)
 		throw(file.errorString());
 	assert(nodes.size());
 	file.write((char*)&(nodes[0]), sizeof(Node)*nodes.size());
 	if(patches.size())
 		file.write((char*)&(patches[0]), sizeof(Patch)*patches.size());
-	cout << "patch";
-	for(int i=0;i<patches.size();i++){
-		cout << patches[i].node << ";" << patches[i].triangle_offset << ";" <<patches[i].texture << endl;
-	}
+//	cout << "patch_details" << endl;
+//	for(int i=0;i<patches.size();i++){
+//		cout << i <<  ": " << patches[i].node << ";" << patches[i].triangle_offset << ";" <<patches[i].texture + 1 << endl;
+//	}
 	if(textures.size())
 		file.write((char*)&(textures[0]), sizeof(Texture)*textures.size());
 	file.seek(index_size);

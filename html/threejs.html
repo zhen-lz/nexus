@@ -36,11 +36,11 @@ scene.background = new THREE.Color( 0x000000 );
 scene.fog = new THREE.Fog( 0x050505, 2000, 3500 );
 scene.add( new THREE.AmbientLight( 0x444444 ) );
 
-var light1 = new THREE.DirectionalLight( 0xffffff, 1.0 );
-light1.position.set( 1, 1, -1 );
+var light1 = new THREE.DirectionalLight( 0xffffff, 3 );
+light1.position.set( 1, 1, -1);
 scene.add( light1 );
 
-var light2 = new THREE.DirectionalLight( 0xffffff, 1.0 );
+var light2 = new THREE.DirectionalLight( 0xffffff, 1 );
 light2.position.set( -1, -1, 1 );
 scene.add( light2 );
 
@@ -67,7 +67,7 @@ function getURLParameter(name) {
 	return decodeURIComponent((new RegExp('[?|&]' + name + '=' + '([^&;]+?)(&|#|;|$)').exec(location.search) || [null, ''])[1].replace(/\+/g, '%20')) || null;
 }
 
-var model = getURLParameter('model') || "models/gargo.nxz";
+var model = getURLParameter('model') || "models/gargo-c.nxz";
 
 /* An appropriate material can be used as optional fifth arg for the NexusObject constructor */
 let material = false;
@@ -78,6 +78,7 @@ let material = false;
 
 var nexus_obj = new NexusObject(model, onNexusLoad, function() { redraw = true; }, renderer, material);
 scene.add(nexus_obj);
+console.log(nexus_obj);
 
 window.addEventListener( 'resize', onWindowResize, false );
 

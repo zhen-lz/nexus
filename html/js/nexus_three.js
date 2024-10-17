@@ -67,13 +67,13 @@ function() {
 		geometry.boundingBox = mesh.computeBoundingBox();
 
 		if(mesh.autoMaterial)
-			mesh.material = new THREE.MeshLambertMaterial( { color: 0xffffff } );
+			mesh.material = new THREE.MeshStandardMaterial( { color: 0xffffff } );
 
 		if(this.mesh.vertex.normal) {
 			var normals = new Float32Array(3);
 			geometry.setAttribute( 'normal', new THREE.BufferAttribute(normals, 3));
 		}
-		let materialType = this.mesh.vertex.normal? THREE.MeshLambertMaterial : THREE.MeshBasicMaterial;
+		let materialType = this.mesh.vertex.normal? THREE.MeshStandardMaterial : THREE.MeshBasicMaterial;
 
 		if(this.mesh.vertex.color && this.mesh.vertex.texCoord) {
 			var uv = new Float32Array(2);
@@ -83,7 +83,11 @@ function() {
 			if(mesh.autoMaterial) {
 				var texture = new THREE.DataTexture( new Uint8Array([1, 1, 1]), 1, 1, THREE.RGBFormat );
 				texture.needsUpdate = true;
-				mesh.material = new materialType( { vertexColors: THREE.VertexColors, map: texture } );
+
+				var texture_normal = new THREE.DataTexture( new Uint8Array([1, 1, 1]), 1, 1, THREE.RGBFormat );
+				texture_normal.needsUpdate = true;
+
+				mesh.material = new materialType( { vertexColors: THREE.VertexColors, map: texture,  normalMap: texture_normal } );
 			}
 		}
 		else if(this.mesh.vertex.color) {
