@@ -144,6 +144,32 @@ bool NexusBuilder::initAtlasNor(std::vector<LoadTexture> &textures) {
 	return true;
 }
 
+bool NexusBuilder::initAtlasRou(std::vector<LoadTexture> &textures) {
+	if(textures.size()) {
+		bool success = atlas_rou.addTextures(textures);
+		if(!success)
+			return false;
+	}
+	return true;
+}
+
+bool NexusBuilder::initAtlasMet(std::vector<LoadTexture> &textures) {
+	if(textures.size()) {
+		bool success = atlas_met.addTextures(textures);
+		if(!success)
+			return false;
+	}
+	return true;
+}
+
+bool NexusBuilder::initAtlasEmi(std::vector<LoadTexture> &textures) {
+	if(textures.size()) {
+		bool success = atlas_emi.addTextures(textures);
+		if(!success)
+			return false;
+	}
+	return true;
+}
 void NexusBuilder::create(KDTree *tree, Stream *stream, uint top_node_size) {
 	Node sink;
 	sink.first_patch = 0;
@@ -355,6 +381,12 @@ std::vector<QImage>  NexusBuilder::extractNodeTex(TMesh &mesh, int level, float 
 
 	QImage image_normal(finalSize[0], finalSize[1], QImage::Format_RGB32);
 	image_normal.fill(QColor(127,127,127));
+
+	QImage image_roughness(finalSize[0], finalSize[1], QImage::Format_RGB32);
+	image_roughness.fill(QColor(127,127,127));
+
+	QImage image_metallic(finalSize[0], finalSize[1], QImage::Format_RGB32);
+	image_metallic.fill(QColor(127,127,127));
 	//copy boxes using mapping
 
 	float pdx = 1/(float)image.width();
@@ -434,6 +466,8 @@ std::vector<QImage>  NexusBuilder::extractNodeTex(TMesh &mesh, int level, float 
 		//	static int boxid = 0;
 		QPainter painter(&image);
 		QPainter painter_normal(&image_normal);
+		QPainter painter_roughness(&image_roughness);
+		QPainter painter_metallic(&image_metallic);
 		//convert tex coordinates using mapping
 		for(int i = 0; i < boxes.size(); i++) {
 
@@ -453,6 +487,11 @@ std::vector<QImage>  NexusBuilder::extractNodeTex(TMesh &mesh, int level, float 
 			QImage rect_normal = atlas_nor.read(source, level, QRect(o[0], o[1], s[0], s[1]));
 			painter_normal.drawImage(mapping[i][0], mapping[i][1], rect_normal);
 
+			QImage rect_roughness = atlas_rou.read(source, level, QRect(o[0], o[1], s[0], s[1]));
+			painter_roughness.drawImage(mapping[i][0], mapping[i][1], rect_roughness);
+
+			QImage rect_metallic = atlas_met.read(source, level, QRect(o[0], o[1], s[0], s[1]));
+			painter_metallic.drawImage(mapping[i][0], mapping[i][1], rect_metallic);
 			//		painter.fillRect(mapping[i][0], mapping[i][1], s[0], s[1], QColor(color[0], color[1], color[2]));
 			//		boxid++;
 		}
@@ -495,10 +534,12 @@ std::vector<QImage>  NexusBuilder::extractNodeTex(TMesh &mesh, int level, float 
 
 	image = image.mirrored();
 	image_normal = image_normal.mirrored();
+	image_roughness = image_roughness.mirrored();
+	image_metallic = image_metallic.mirrored();
 	//static int imgcount = 0;
 	//image.save(QString("OUT_test_%1.jpg").arg(imgcount++));
 
-	std::vector<QImage> vq ={image,image_normal};
+	std::vector<QImage> vq ={image,image_normal,image_roughness,image_metallic};
 	return vq;
 }
 
@@ -646,10 +687,15 @@ void NexusBuilder::processBlock(KDTreeSoup *input, StreamSoup *output, uint bloc
 			std::vector<QImage> vq = extractNodeTex(tmp, level, error, pixelXedge);
 			QImage nodetex = vq[0];
 			QImage nodetex_nor = vq[1];
+			QImage nodeTex_rou = vq[2];
+			QImage nodeTex_met = vq[3];
+
 			tmp.serialize(buffer, header.signature, node_patches);
 
 			Texture t;
 			Texture t_n;
+			Texture t_r;
+			Texture t_m;
 
 			{
 				QMutexLocker locker(&m_textures);
@@ -685,12 +731,44 @@ void NexusBuilder::processBlock(KDTreeSoup *input, StreamSoup *output, uint bloc
 				quint64 size_n = pad(nodeTex.size());
 				nodeTex.resize(size_n);
 				nodeTex.seek(size_n);
+
+				// --- roughness texture
+				t_r.offset = nodeTex.size()/NEXUS_PADDING;
+				output_pixels += nodeTex_rou.width()*nodeTex_rou.height();
+				QImageWriter writer_r(&nodeTex, "jpg");
+				writer_r.setQuality(tex_quality);
+#if QT_VERSION >= QT_VERSION_CHECK(5, 5, 0)
+				writer_r.setOptimizedWrite(true);
+				writer_r.setProgressiveScanWrite(true);
+#endif
+				writer_r.write(nodeTex_rou);
+
+				quint64 size_r = pad(nodeTex.size());
+				nodeTex.resize(size_r);
+				nodeTex.seek(size_r);
+
+				// --- metalness texture
+				t_m.offset = nodeTex.size()/NEXUS_PADDING;
+				output_pixels += nodeTex_met.width()*nodeTex_met.height();
+				QImageWriter writer_m(&nodeTex, "jpg");
+				writer_m.setQuality(tex_quality);
+#if QT_VERSION >= QT_VERSION_CHECK(5, 5, 0)
+				writer_m.setOptimizedWrite(true);
+				writer_m.setProgressiveScanWrite(true);
+#endif
+				writer_m.write(nodeTex_met);
+
+				quint64 size_m = pad(nodeTex.size());
+				nodeTex.resize(size_m);
+				nodeTex.seek(size_m);
 			}
 			{
 				QMutexLocker locker(&m_builder);
 				textures.push_back(t);
 				textures.push_back(t_n);
-				cout << "Node_texture t+t_n size: " << textures.size() << endl;
+				textures.push_back(t_r);
+				textures.push_back(t_m);
+				cout << "Node_texture size: " << textures.size() << endl;
 				for(Patch &patch: node_patches)
 					patch.texture = textures.size()-1; //last texture inserted
 			}
@@ -816,6 +894,8 @@ void NexusBuilder::processBlock(KDTreeSoup *input, StreamSoup *output, uint bloc
 void NexusBuilder::createMeshLevel(KDTreeSoup *input, StreamSoup *output, int level) {
 	atlas.buildLevel(level);
 	atlas_nor.buildLevel(level);
+	atlas_rou.buildLevel(level);
+	atlas_met.buildLevel(level);
 	if(level > 0)
 		atlas.flush(level-1);
 

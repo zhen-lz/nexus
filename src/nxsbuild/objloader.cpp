@@ -132,6 +132,10 @@ void ObjLoader::readMTL() {
 			QString mtltag = str.section(" ", 1);
 			QString txtfname;
 			QString txtfname_normal;
+			QString txtfname_roughness;
+			QString txtfname_metallic;
+			QString txtfname_emissive;
+
 			qint32 R = 0xff000000;
 			qint32 G = 0x00ff0000;
 			qint32 B = 0x0000ff00;
@@ -192,6 +196,30 @@ void ObjLoader::readMTL() {
 					txtfname_normal = txtfname_normal.remove(QRegExp("(\")$"));
 					continue;
 				}
+				if(str.startsWith("Map_Ns",Qt::CaseInsensitive)){
+					txtfname_roughness = str.mid(7).trimmed();
+					txtfname_roughness = txtfname_roughness.remove(QRegExp("^(\")"));
+					txtfname_roughness = txtfname_roughness.remove(QRegExp("(\")$"));
+					continue;
+				}
+				if(str.startsWith("Map_Refl",Qt::CaseInsensitive)){
+					txtfname_metallic = str.mid(9).trimmed();
+					txtfname_metallic = txtfname_metallic.remove(QRegExp("^(\")"));
+					txtfname_metallic = txtfname_metallic.remove(QRegExp("(\")$"));
+					continue;
+				}
+				if(str.startsWith("Map_Ke",Qt::CaseInsensitive)){
+					txtfname_emissive = str.mid(7).trimmed();
+					txtfname_emissive = txtfname_emissive.remove(QRegExp("^(\")"));
+					txtfname_emissive = txtfname_emissive.remove(QRegExp("(\")$"));
+					continue;
+				}
+				if(str.startsWith("Map_Bump",Qt::CaseInsensitive)){
+					txtfname_normal = str.section(" ", 3);
+					txtfname_normal = txtfname_normal.remove(QRegExp("^()\""));
+					txtfname_normal = txtfname_normal.remove(QRegExp("(\")$"));
+					continue;
+				}
 
 			} while (true);
 
@@ -228,6 +256,52 @@ void ObjLoader::readMTL() {
 					texture_normal_filenames.push_back(LoadTexture(txtfname_normal));
 				}
 			}
+			if (txtfname_roughness.length() > 0){
+				sanitizeTextureFilepath(txtfname_roughness);
+				resolveTextureFilepath(file.fileName(), txtfname_roughness);
+
+				// textures_map.insert(mtltag, txtfname_roughness);
+				bool exists = false;
+				for (auto fn : texture_roughness_filenames)
+					if (fn.filename == txtfname_roughness){
+						exists = true;
+						break;
+					}
+				if (!exists){
+					texture_roughness_filenames.push_back(LoadTexture(txtfname_roughness));
+				}
+			}
+			if(txtfname_metallic.length() > 0){
+				sanitizeTextureFilepath(txtfname_metallic);
+				resolveTextureFilepath(file.fileName(), txtfname_metallic);
+
+				// textures_map.insert(mtltag, txtfname_metallic);
+				bool exists = false;
+				for (auto fn : texture_metallic_filenames)
+					if (fn.filename == txtfname_metallic){
+						exists = true;
+						break;
+					}
+				if (!exists){
+					texture_metallic_filenames.push_back(LoadTexture(txtfname_metallic));
+				}
+			}
+
+			if(txtfname_emissive.length() > 0){
+				sanitizeTextureFilepath(txtfname_emissive);
+				resolveTextureFilepath(file.fileName(), txtfname_emissive);
+
+				// textures_map.insert(mtltag, txtfname_emissive);
+				bool exists = false;
+				for (auto fn : texture_emissive_filenames)
+					if (fn.filename == txtfname_emissive){
+						exists = true;
+						break;
+					}
+				if (!exists){
+					texture_emissive_filenames.push_back(LoadTexture(txtfname_emissive));
+				}
+			}
 			
 			//std::cout << buffer;// << endl;
 			cnt++;
@@ -236,14 +310,24 @@ void ObjLoader::readMTL() {
 	std::cout << "Colors read: " << cnt << std::endl;
 	for (auto tex : texture_filenames)
 		std::cout << qPrintable("Texture: " + tex.filename) << std::endl;
-	for(auto tex : texture_normal_filenames){
-		std::cout << qPrintable("Texture: " + tex.filename) << std::endl;
-	}
+	for (auto tex : texture_normal_filenames)
+		std::cout << qPrintable("Texture_Normal: " + tex.filename) << std::endl;
+	for (auto tex : texture_roughness_filenames)
+		std::cout << qPrintable("Texture_Roughness: " + tex.filename) << std::endl;
+	for (auto tex : texture_metallic_filenames)
+		std::cout << qPrintable("Texture_Metallic: " + tex.filename) << std::endl;
+	for (auto tex : texture_emissive_filenames)
+		std::cout << qPrintable("Texture_Emissive: " + tex.filename) << std::endl;
 	if (texture_filenames.size() > 0)
 		has_textures = true;
-	if (texture_normal_filenames.size() > 0){
+	if (texture_normal_filenames.size() > 0)
 		has_textures_normal = true;
-	}
+	if (texture_roughness_filenames.size() > 0)
+		has_textures_roughness = true;
+	if (texture_metallic_filenames.size() > 0)
+		has_textures_metallic = true;
+	if (texture_emissive_filenames.size() > 0)
+		has_textures_emissive = true;
 	if (cnt)
 		has_colors = true;
 }

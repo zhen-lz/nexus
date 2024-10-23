@@ -100,6 +100,9 @@ void Stream::load(MeshLoader *loader) {
 	has_normals &= loader->hasNormals();
 	has_textures &= loader->hasTextures();
 	has_textures_normal &= loader->hasTexturesNormal();
+	has_textures_roughness &= loader->hasTexturesRoughness();
+	has_textures_metallic &= loader->hasTexturesMetallic();
+	has_textures_emissive &= loader->hasTexturesEmissive();
 
 	if(has_textures) {
 		for(auto tex: loader->texture_filenames) {
@@ -111,6 +114,21 @@ void Stream::load(MeshLoader *loader) {
 			textures_normal.push_back(tex_nor);
 		}
 	}
+	if(has_textures_roughness) {
+		for(auto tex_rou: loader->texture_roughness_filenames) {
+			textures_roughness.push_back(tex_rou);
+		}
+	}
+	if(has_textures_metallic) {
+		for(auto tex_met: loader->texture_metallic_filenames) {
+			textures_metallic.push_back(tex_met);
+		}
+	}
+	if(has_textures_emissive) {
+		for(auto tex_emi: loader->texture_emissive_filenames) {
+			textures_emissive.push_back(tex_emi);
+		}
+	}
 }
 
 void Stream::load(QStringList paths, QString material) {
@@ -119,6 +137,10 @@ void Stream::load(QStringList paths, QString material) {
 	has_normals = true;
 	has_textures = true;
 	has_textures_normal = true;
+	has_textures_roughness = true;
+	has_textures_metallic = true;
+	has_textures_emissive = true;
+
 	foreach(QString file, paths) {
 		qDebug() << "Reading" << qPrintable(file);
 		MeshLoader *loader = getLoader(file, material);

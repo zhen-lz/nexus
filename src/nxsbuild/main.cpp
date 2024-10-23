@@ -232,13 +232,20 @@ int main(int argc, char *argv[]) {
 		bool has_colors = stream->hasColors();
 		bool has_normals = stream->hasNormals();
 		bool has_textures = stream->hasTextures();
+
 		bool has_textures_normal = stream->hasTexturesNormal();
+		bool has_textures_roughness = stream->hasTexturesRoughness();
+		bool has_textures_metallic = stream->hasTexturesMetallic();
+		bool has_textures_emissive = stream->hasTexturesEmissive();
 
 		cout << "Components: " << input;
 		if(has_normals) cout << " normals";
 		if(has_colors) cout << " colors";
 		if(has_textures) cout << " textures";
 		if(has_textures_normal) cout << " normal_textures";
+		if(has_textures_roughness) cout << " roughness_textures";
+		if(has_textures_metallic) cout << " metallic_textures";
+		if(has_textures_emissive) cout << " emissive_textures";
 		cout << "\n";
 
 		quint32 components = 0;
@@ -279,7 +286,6 @@ int main(int argc, char *argv[]) {
 			return 1;
 		}else{
 			cout << "Texture size: " << stream->textures.size() << endl;
-			cout << "Texture pyramids size: " << builder.atlas.pyramids.size() << endl;
 		}
 		success = builder.initAtlasNor(stream->textures_normal);
 		if(!success) {
@@ -287,9 +293,22 @@ int main(int argc, char *argv[]) {
 			return 1;
 		}else{
 			cout << "Normal Texture size: " << stream->textures_normal.size() << endl;
-			cout << "Normal Texture pyramids size: " << builder.atlas_nor.pyramids.size() << endl;
 		}
-
+		success = builder.initAtlasRou(stream->textures_roughness);
+		if(!success) {
+			cerr << "Exiting" << endl;
+			return 1;
+		}else{
+			cout << "Roughness Texture size: " << stream->textures_roughness.size() << endl;
+		}
+		success = builder.initAtlasMet(stream->textures_metallic);
+		if(!success) {
+			cerr << "Exiting" << endl;
+			return 1;
+		}else{
+			cout << "Metallic Texture size: " << stream->textures_metallic.size() << endl;
+		}
+		cout << "TODO: Emissive Textures" << endl;
 
 		if(point_cloud)
 			tree = new KDTreeCloud("cache_tree", adaptive.toFloat());

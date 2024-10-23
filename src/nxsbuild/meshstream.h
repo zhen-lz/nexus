@@ -38,8 +38,15 @@ public:
 	bool has_normals;
 	bool has_textures;
 	bool has_textures_normal;
+	bool has_textures_roughness;
+	bool has_textures_metallic;
+	bool has_textures_emissive;
 	std::vector<LoadTexture> textures;
 	std::vector<LoadTexture> textures_normal;
+	std::vector<LoadTexture> textures_roughness;
+	std::vector<LoadTexture> textures_metallic;
+	std::vector<LoadTexture> textures_emissive;
+
 	vcg::Point3d origin = vcg::Point3d(0, 0, 0);
 
 	Stream();
@@ -58,6 +65,9 @@ public:
 	virtual bool hasNormals() { return has_normals; }
 	virtual bool hasTextures() { return has_textures; }
 	virtual bool hasTexturesNormal() { return has_textures_normal; }
+	virtual bool hasTexturesRoughness() { return has_textures_roughness; }
+	virtual bool hasTexturesMetallic() { return has_textures_metallic; }	
+	virtual bool hasTexturesEmissive() { return has_textures_emissive; }
 
 protected:
 	std::vector<std::vector<quint64> > levels; //for each level the list of blocks

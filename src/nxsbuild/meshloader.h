@@ -49,10 +49,17 @@ public:
 	vcg::Box3d box;
 	
 	std::vector<LoadTexture> texture_filenames;
+	
 	std::vector<LoadTexture> texture_normal_filenames;
+	std::vector<LoadTexture> texture_roughness_filenames;
+	std::vector<LoadTexture> texture_metallic_filenames;
+	std::vector<LoadTexture> texture_emissive_filenames;
 	int texOffset; //when returning triangles add texOffset to refer to the correct texture in stream.
 
 	virtual bool hasTexturesNormal() { return has_textures_normal;}
+	virtual bool hasTexturesRoughness() { return has_textures_roughness;}
+	virtual bool hasTexturesMetallic() { return has_textures_metallic;}
+	virtual bool hasTexturesEmissive() { return has_textures_emissive;}
 
 
 
@@ -61,7 +68,12 @@ protected:
 	bool has_colors;
 	bool has_normals;
 	bool has_textures;
+
 	bool has_textures_normal;
+	bool has_textures_roughness;
+	bool has_textures_metallic;
+	bool has_textures_emissive;
+
 	float quantization;
 
 	void quantize(float &value);

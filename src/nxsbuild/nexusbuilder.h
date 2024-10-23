@@ -88,7 +88,12 @@ public:
 
 	void initAtlas(const std::vector<QImage>& textures);
 	bool initAtlas(std::vector<LoadTexture>& textures);
+	
 	bool initAtlasNor(std::vector<LoadTexture>& textures);
+	bool initAtlasRou(std::vector<LoadTexture>& textures);
+	bool initAtlasMet(std::vector<LoadTexture>& textures);
+	bool initAtlasEmi(std::vector<LoadTexture>& textures);
+
 	void create(KDTree *input, Stream *output, uint top_node_size);
 	void createLevel(KDTree *input, Stream *output, int level);
 	void createCloudLevel(KDTreeCloud *input, StreamCloud *output, int level);
@@ -127,12 +132,19 @@ public:
 	std::vector<nx::Node> nodes;
 	std::vector<nx::Patch> patches;
 	std::vector<nx::Texture> textures;
+
 	std::vector<nx::Texture> textures_normal;
+	std::vector<nx::Texture> textures_roughness;
+	std::vector<nx::Texture> textures_metallic;
+	std::vector<nx::Texture> textures_emissive;
 	std::vector<QString> images;
 
 	quint64 input_pixels, output_pixels;
 	nx::TexAtlas atlas;
 	nx::TexAtlas atlas_nor;
+	nx::TexAtlas atlas_rou;
+	nx::TexAtlas atlas_met;
+	nx::TexAtlas atlas_emi;
 	QTemporaryFile nodeTex; //texure images for each node stored here.
 	quint64 max_memory;
 	int n_threads = 4;

@@ -24,6 +24,7 @@ for more details.
 #include <QFile>
 #include <QMap>
 #include <vector>
+#include <map>
 
 
 class ObjLoader: public MeshLoader {
