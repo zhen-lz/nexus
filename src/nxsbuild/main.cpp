@@ -308,7 +308,13 @@ int main(int argc, char *argv[]) {
 		}else{
 			cout << "Metallic Texture size: " << stream->textures_metallic.size() << endl;
 		}
-		cout << "TODO: Emissive Textures" << endl;
+		success = builder.initAtlasEmi(stream->textures_emissive);
+		if(!success){
+			cerr << "Exiting" << endl;
+			return 1;
+		}else{
+			cout << "Emissive Texture size: " << stream->textures_emissive.size() << endl;
+		}
 
 		if(point_cloud)
 			tree = new KDTreeCloud("cache_tree", adaptive.toFloat());

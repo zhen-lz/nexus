@@ -387,6 +387,10 @@ std::vector<QImage>  NexusBuilder::extractNodeTex(TMesh &mesh, int level, float 
 
 	QImage image_metallic(finalSize[0], finalSize[1], QImage::Format_RGB32);
 	image_metallic.fill(QColor(127,127,127));
+
+	
+	QImage image_emissive(finalSize[0], finalSize[1], QImage::Format_RGB32);
+	image_emissive.fill(QColor(127,127,127));
 	//copy boxes using mapping
 
 	float pdx = 1/(float)image.width();
@@ -468,6 +472,7 @@ std::vector<QImage>  NexusBuilder::extractNodeTex(TMesh &mesh, int level, float 
 		QPainter painter_normal(&image_normal);
 		QPainter painter_roughness(&image_roughness);
 		QPainter painter_metallic(&image_metallic);
+		QPainter painter_emissive(&image_emissive);
 		//convert tex coordinates using mapping
 		for(int i = 0; i < boxes.size(); i++) {
 
@@ -492,6 +497,9 @@ std::vector<QImage>  NexusBuilder::extractNodeTex(TMesh &mesh, int level, float 
 
 			QImage rect_metallic = atlas_met.read(source, level, QRect(o[0], o[1], s[0], s[1]));
 			painter_metallic.drawImage(mapping[i][0], mapping[i][1], rect_metallic);
+
+			QImage rect_emissive = atlas_emi.read(source, level, QRect(o[0], o[1], s[0], s[1]));
+			painter_emissive.drawImage(mapping[i][0], mapping[i][1], rect_emissive);
 			//		painter.fillRect(mapping[i][0], mapping[i][1], s[0], s[1], QColor(color[0], color[1], color[2]));
 			//		boxid++;
 		}
@@ -536,10 +544,11 @@ std::vector<QImage>  NexusBuilder::extractNodeTex(TMesh &mesh, int level, float 
 	image_normal = image_normal.mirrored();
 	image_roughness = image_roughness.mirrored();
 	image_metallic = image_metallic.mirrored();
+	image_emissive = image_emissive.mirrored();
 	//static int imgcount = 0;
 	//image.save(QString("OUT_test_%1.jpg").arg(imgcount++));
 
-	std::vector<QImage> vq ={image,image_normal,image_roughness,image_metallic};
+	std::vector<QImage> vq ={image,image_normal,image_roughness,image_metallic,image_emissive};
 	return vq;
 }
 
@@ -634,7 +643,7 @@ void NexusBuilder::processBlock(KDTreeSoup *input, StreamSoup *output, uint bloc
 		Soup soup = input->get(block); //soup is memory allocated by input, lock is needed.
 		assert(soup.size() < (1<<16));
 		if(soup.size() == 0) return;
-
+ 
 		ntriangles = soup.size();
 		if(!hasTextures()) {
 			mesh1.load(soup);
@@ -689,6 +698,7 @@ void NexusBuilder::processBlock(KDTreeSoup *input, StreamSoup *output, uint bloc
 			QImage nodetex_nor = vq[1];
 			QImage nodeTex_rou = vq[2];
 			QImage nodeTex_met = vq[3];
+			QImage nodeTex_emi= vq[4];
 
 			tmp.serialize(buffer, header.signature, node_patches);
 
@@ -696,6 +706,7 @@ void NexusBuilder::processBlock(KDTreeSoup *input, StreamSoup *output, uint bloc
 			Texture t_n;
 			Texture t_r;
 			Texture t_m;
+			Texture t_e;
 
 			{
 				QMutexLocker locker(&m_textures);
@@ -761,6 +772,21 @@ void NexusBuilder::processBlock(KDTreeSoup *input, StreamSoup *output, uint bloc
 				quint64 size_m = pad(nodeTex.size());
 				nodeTex.resize(size_m);
 				nodeTex.seek(size_m);
+
+				// --- emissive texture
+				t_e.offset = nodeTex.size()/NEXUS_PADDING;
+				output_pixels += nodeTex_emi.width()*nodeTex_emi.height();
+				QImageWriter writer_e(&nodeTex, "jpg");
+				writer_e.setQuality(tex_quality);
+#if QT_VERSION >= QT_VERSION_CHECK(5, 5, 0)
+				writer_e.setOptimizedWrite(true);
+				writer_e.setProgressiveScanWrite(true);
+#endif
+				writer_e.write(nodeTex_emi);
+
+				quint64 size_e = pad(nodeTex.size());
+				nodeTex.resize(size_e);
+				nodeTex.seek(size_e);
 			}
 			{
 				QMutexLocker locker(&m_builder);
@@ -768,6 +794,7 @@ void NexusBuilder::processBlock(KDTreeSoup *input, StreamSoup *output, uint bloc
 				textures.push_back(t_n);
 				textures.push_back(t_r);
 				textures.push_back(t_m);
+				textures.push_back(t_e);
 				cout << "Node_texture size: " << textures.size() << endl;
 				for(Patch &patch: node_patches)
 					patch.texture = textures.size()-1; //last texture inserted
@@ -896,8 +923,13 @@ void NexusBuilder::createMeshLevel(KDTreeSoup *input, StreamSoup *output, int le
 	atlas_nor.buildLevel(level);
 	atlas_rou.buildLevel(level);
 	atlas_met.buildLevel(level);
+	atlas_emi.buildLevel(level);
 	if(level > 0)
 		atlas.flush(level-1);
+		atlas_nor.flush(level-1);
+		atlas_rou.flush(level-1);
+		atlas_met.flush(level-1);
+		atlas_emi.flush(level-1);
 
 
 	QThreadPool pool;

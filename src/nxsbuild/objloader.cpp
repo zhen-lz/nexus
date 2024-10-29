@@ -136,6 +136,8 @@ void ObjLoader::readMTL() {
 			QString txtfname_metallic;
 			QString txtfname_emissive;
 
+			bool not_emi = false;
+
 			qint32 R = 0xff000000;
 			qint32 G = 0x00ff0000;
 			qint32 B = 0x0000ff00;
@@ -287,19 +289,27 @@ void ObjLoader::readMTL() {
 				}
 			}
 
+			if(txtfname_emissive.length() <= 0){
+				txtfname_emissive = "black.jpg";
+				not_emi = true;
+			}
 			if(txtfname_emissive.length() > 0){
 				sanitizeTextureFilepath(txtfname_emissive);
 				resolveTextureFilepath(file.fileName(), txtfname_emissive);
 
 				// textures_map.insert(mtltag, txtfname_emissive);
-				bool exists = false;
-				for (auto fn : texture_emissive_filenames)
-					if (fn.filename == txtfname_emissive){
-						exists = true;
-						break;
-					}
-				if (!exists){
+				if(not_emi){
 					texture_emissive_filenames.push_back(LoadTexture(txtfname_emissive));
+				}else{
+					bool exists = false;
+					for (auto fn : texture_emissive_filenames)
+						if (fn.filename == txtfname_emissive){
+							exists = true;
+							break;
+						}
+					if (!exists){
+						texture_emissive_filenames.push_back(LoadTexture(txtfname_emissive));
+					}
 				}
 			}
 			
