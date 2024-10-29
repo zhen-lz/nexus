@@ -93,7 +93,10 @@ function() {
 				var texture_metallic = new THREE.DataTexture( new Uint8Array([1, 1, 1]), 1, 1, THREE.RGBFormat );
 				texture_metallic.needsUpdate = true;
 
-				mesh.material = new materialType( { vertexColors: THREE.VertexColors, map: texture,  normalMap: texture_normal ,roughness: 1, roughnessMap: texture_roughness,metalness : 1, metalnessMap: texture_metallic } );
+				var texture_emissve = new THREE.DataTexture( new Uint8Array([1, 1, 1]), 1, 1, THREE.RGBFormat );
+				texture_emissve.needsUpdate = true;
+
+				mesh.material = new materialType( { vertexColors: THREE.VertexColors, map: texture,  bumpMap: texture_normal ,roughness: 1, roughnessMap: texture_roughness,metalness : 1, metalnessMap: texture_metallic ,emissiveMap: texture_emissve } );
 			}
 		}
 		else if(this.mesh.vertex.color) {
