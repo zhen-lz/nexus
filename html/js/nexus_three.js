@@ -93,10 +93,12 @@ function() {
 				var texture_metallic = new THREE.DataTexture( new Uint8Array([1, 1, 1]), 1, 1, THREE.RGBFormat );
 				texture_metallic.needsUpdate = true;
 
-				var texture_emissve = new THREE.DataTexture( new Uint8Array([1, 1, 1]), 1, 1, THREE.RGBFormat );
-				texture_emissve.needsUpdate = true;
+				var texture_emissive = new THREE.DataTexture( new Uint8Array([1, 1, 1]), 1, 1, THREE.RGBFormat );
+				texture_emissive.needsUpdate = true;
 
-				mesh.material = new materialType( { vertexColors: THREE.VertexColors, map: texture,  bumpMap: texture_normal ,roughness: 1, roughnessMap: texture_roughness,metalness : 1, metalnessMap: texture_metallic ,emissiveMap: texture_emissve } );
+				var emissive = new THREE.Color().fromArray( [1,1,1] ).convertSRGBToLinear();
+
+				mesh.material = new materialType( { vertexColors: THREE.VertexColors, map: texture ,normalMap: texture_normal,roughnessMap: texture_roughness,metalness:1,metalnessMap: texture_metallic,emissive:emissive,emissiveMap: texture_emissive } );
 			}
 		}
 		else if(this.mesh.vertex.color) {
@@ -142,6 +144,10 @@ function onAfterRender(renderer, scene, camera, geometry, material, group) {
 
 	var program = gl.getParameter(gl.CURRENT_PROGRAM);
 
+	gl.uniform1i( gl.getUniformLocation(program, "normalMap"), 1);
+	gl.uniform1i( gl.getUniformLocation(program, "roughnessMap"), 2);
+	gl.uniform1i( gl.getUniformLocation(program, "metalnessMap"), 3);
+	gl.uniform1i( gl.getUniformLocation(program, "emissiveMap"), 4);
 
 	var attr = instance.attributes;
 	attr.position = gl.getAttribLocation(program, "position");
@@ -152,7 +158,19 @@ function onAfterRender(renderer, scene, camera, geometry, material, group) {
 	attr.scale    = gl.getUniformLocation(program, "scale");
 	let map_location = gl.getUniformLocation(program, "map")
 	attr.map      = map_location ? gl.getUniform(program, map_location) : null;
+	let normalMap_location = gl.getUniformLocation(program, "normalMap");
+	attr.normalMap = normalMap_location ? gl.getUniform(program, normalMap_location) : null;
+	let bumpMap_location = gl.getUniformLocation(program, "bumpMap");
+	attr.bumpMap = bumpMap_location ? gl.getUniform(program, bumpMap_location) : null;
+	let roughnessMap_location = gl.getUniformLocation(program, "roughnessMap");
+	attr.roughnessMap = roughnessMap_location ? gl.getUniform(program, roughnessMap_location) : null;
+	let metalnessMap_location = gl.getUniformLocation(program, "metalnessMap");
+	attr.metalnessMap = metalnessMap_location ? gl.getUniform(program, metalnessMap_location) : null;
+	let emissiveMap_location = gl.getUniformLocation(program, "emissiveMap");
+	attr.emissiveMap = emissiveMap_location ? gl.getUniform(program, emissiveMap_location) : null;
 
+
+	console.log("location",attr)
 
 	//hack to detect if threejs using point or triangle shaders
 	if(instance.mesh.face.index)

@@ -9,6 +9,7 @@
 <script src="js/nexus.js"></script>
 <script src="js/nexus_three.js"></script>
 <script src="js/trackball_three.js"></script>
+<!-- <script src="core/embed.js"></script>  -->
 </head>
 
 <body>
@@ -37,7 +38,7 @@ scene.fog = new THREE.Fog( 0x050505, 2000, 3500 );
 scene.add( new THREE.AmbientLight( 0x444444 ) );
 
 var light1 = new THREE.DirectionalLight( 0xffffff, 1 );
-light1.position.set( 1, 1, -1);
+light1.position.set( 0, 1, 0);
 scene.add( light1 );
 
 var light2 = new THREE.DirectionalLight( 0xffffff, 1 );
@@ -67,7 +68,7 @@ function getURLParameter(name) {
 	return decodeURIComponent((new RegExp('[?|&]' + name + '=' + '([^&;]+?)(&|#|;|$)').exec(location.search) || [null, ''])[1].replace(/\+/g, '%20')) || null;
 }
 
-var model = getURLParameter('model') || "models/XG.nxz";
+var model = getURLParameter('model') || "models/XG.nxs";
 
 /* An appropriate material can be used as optional fifth arg for the NexusObject constructor */
 let material = false;
@@ -107,5 +108,4 @@ function animate() {
 
 animate();
 </script>
-
 </html>

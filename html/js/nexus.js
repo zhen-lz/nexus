@@ -555,7 +555,7 @@ Instance = function(gl) {
 	this.onLoad = function() {};
 	this.onUpdate = null;
 	this.drawBudget = drawBudget;
-	this.attributes = { 'position':0, 'normal':1, 'color':2, 'uv':3, 'size':4, 'map':0 ,'normalMap':1, 'roughnessMap':2,'metalnessMap':3,'emissiveMap':4};
+	this.attributes = { 'position':0, 'normal':1, 'color':3, 'uv':2, 'size':4, 'map':0 ,'normalMap':1, 'roughnessMap':2,'metalnessMap':3,'emissiveMap':4, 'bumpMap': -1};
 }
 
 Instance.prototype = {
@@ -812,7 +812,6 @@ Instance.prototype = {
 		var m = t.mesh;
 		var gl = t.gl;
 		var attr = t.attributes;
-		console.log("renderNodes", m);
 
 		var vertexEnabled = gl.getVertexAttrib(attr.position, gl.VERTEX_ATTRIB_ARRAY_ENABLED);
 		var normalEnabled = attr.normal >= 0? gl.getVertexAttrib(attr.normal, gl.VERTEX_ATTRIB_ARRAY_ENABLED): false;
@@ -829,7 +828,7 @@ Instance.prototype = {
 			if(t.mode != "POINT") {
 				var skip = true;
 				for(var p = m.nfirstpatch[n]; p < m.nfirstpatch[n+1]; p++) {
-					var child = m.patches[p*3];
+					var child = m.patches[p*3];           
 					if(!t.selected[child]) {
 						skip = false;
 						break;
@@ -924,12 +923,12 @@ Instance.prototype = {
 					if(m.vertex.texCoord) {
 						var texid = m.patches[m.nfirstpatch[n]*3+2];
 						if(texid != -1 && texid != last_texture) { //bind texture
-							var tex = m.texids[texid-1];
-							gl.activeTexture(gl.TEXTURE0 + 0);
+							var tex = m.texids[texid-4];
+							gl.activeTexture(gl.TEXTURE0 + t.attributes.map);
 							gl.bindTexture(gl.TEXTURE_2D, tex);
 							
-							var tex_nor = m.texids[texid];
-							gl.activeTexture(gl.TEXTURE0 + 1);
+							var tex_nor = m.texids[texid-3];
+							gl.activeTexture(gl.TEXTURE0 + test);
 							gl.bindTexture(gl.TEXTURE_2D, tex_nor);
 						}
 					}
@@ -955,7 +954,6 @@ Instance.prototype = {
 					if(m.vertex.texCoord) {
 						var texid = m.patches[p*3+2];
 						if(texid != -1 && texid != last_texture) { //bind texture
-							
 							var tex = m.texids[texid-4];
 							gl.activeTexture(gl.TEXTURE0 + 0);
 							gl.bindTexture(gl.TEXTURE_2D, tex);
@@ -969,11 +967,11 @@ Instance.prototype = {
 							gl.bindTexture(gl.TEXTURE_2D, tex_rou);
 							
 							var tex_met = m.texids[texid-1];
-							gl.activeTexture(gl.TEXTURE0 + 3);
+							gl.activeTexture(gl.TEXTURE0 +  3);
 							gl.bindTexture(gl.TEXTURE_2D, tex_met);
 
 							var tex_emi = m.texids[texid];
-							gl.activeTexture(gl.TEXTURE0 + 4);
+							gl.activeTexture(gl.TEXTURE0 +  4);
 							gl.bindTexture(gl.TEXTURE_2D, tex_emi);
 
 							last_texture = texid;
@@ -1409,7 +1407,6 @@ function loadNodeTexture(request, context, node, texid ,i) {
 	var gl = context.gl;
 	img.onload = function() {
 		urlCreator.revokeObjectURL(img.src);
-
 		var flip = gl.getParameter(gl.UNPACK_FLIP_Y_WEBGL);
 		gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
 		var tex = m.texids[texid-4+i] = gl.createTexture();
